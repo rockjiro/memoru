@@ -3,10 +3,13 @@
 <head>
 <meta charset="utf-8">
 <title>Memoru</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
-<link rel="stylesheet" href="/index.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
 <script src="https://www.gstatic.com/firebasejs/5.5.9/firebase.js"></script>
+<script src="https://unpkg.com/vuefire/dist/vuefire.js"></script>
 <script>
   // Initialize Firebase
   var config = {
@@ -20,6 +23,19 @@
   firebase.initializeApp(config);
 </script>
 <style>
+  .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      padding: 15px;
+      width: 100%;
+      box-shadow: 0 2px 2px 2px rgba(0, 0, 0, 0.5)
+  }
+
+  .header h1 {
+      margin: 0;
+  }
+
   .input-area-mask {
       display: table;
       height: 100vh;
@@ -29,40 +45,56 @@
   .input-area {
       display: table-cell;
       vertical-align: middle;
-      background: #4CAF50;
   }
 
   .input-area .container {
-      background: #fff;
       padding: 15px;
-      box-shadow: 0 6px 3px 1px #00000059;
+  }
+
+  .todo-list {
+      margin: 50px 0;
+  }
+
+  .todo-list > .task {
+      margin: 15px 0;
+      padding: 15px;
+      box-shadow: 0 2px 6px 1px #00000047;
+      font-size: 16px;
+      position: relative;
+  }
+
+  .todo-list .done {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      cursor: pointer;
+      margin: 0;
   }
 </style>
 </head>
 <body>
-  <div class="input-area-mask">
+  <div class="header teal darken-2">
+    <h1 class="white-text">Memoru</h1>
+  </div>
+  <div id="app" class="input-area-mask">
     <div class="input-area">
       <div class="container">
         <div class="row">
           <div class="col s12">
             <div class="row">
-              <div class="input-field col s12">
-                <input type="text" id="add_text" class="autocomplete">
-                <label for="autocomplete-input">テキストを入力</label>
-                <a id="add_text" class="waves-effect waves-light btn" onclick="changeData()">追加</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="container">
-      <div class="row">
-        <div class="col s12 m6">
-          <div class="card">
-            <div class="card-content teal-text">
-              <span class="card-title">Card</span>
-              <p id="chatText"></p>
+              <form id="form" v-on:submit.prevent="addTask">
+                <div class="input-field col s12">
+                  <input type="text" id="autocomplete-input" v-model="newTask.text" class="autocomplete">
+                  <label for="autocomplete-input">Write Here!</label>
+                </div>
+                <button type="submit" class="btn waves-effect waves-light teal darken-2">Add</button>
+              </form>
+              <ul is="transition-group" class="todo-list">
+                <li v-for="task in tasks" class="task" :key="task['.key']">
+                  <span class="teal-text text-darken-2">{{task.text}}</span>
+                  <p class="done" v-on:click="removeTask(task)"><i class="material-icons">done</i></p>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
@@ -70,16 +102,47 @@
     </div>
   </div>
   
+<!-- <div id="app">
+  <ul is="transition-group">
+    <li v-for="task in tasks" class="task" :key="task['.key']">
+      <span>{{task.text}}</span>
+      <button v-on:click="removeTask(task)">X</button>
+    </li>
+  </ul>
+  <form id="form" v-on:submit.prevent="addTask">
+    <input type="text" v-model="newTask.text" placeholder="テキストを入力">
+    <input type="submit" value="Add User">
+  </form>
+</div> -->
     <script>
-      var db = firebase.database();
-      var myChatAll = db.ref("/my/chat/all");
-      function changeData(){
-        var text = document.getElementById("add_text").value;
-        myChatAll.set({title:"example", text:text});
-      }
-      myChatAll.on("value", function(snapshot) { 
-        document.getElementById("chatText").innerText = snapshot.val().text;
-      });
+      var tasksRef = firebase.database().ref('task/all')
+
+      // create Vue app
+      var app = new Vue({
+        // element to mount to
+        el: '#app',
+        // initial data
+        data: {
+          newTask: {
+            text: ''
+          }
+        },
+        // firebase binding
+        // https://github.com/vuejs/vuefire
+        firebase: {
+          tasks: tasksRef
+        },
+        // methods
+        methods: {
+          addTask: function () {
+            tasksRef.push(this.newTask)
+            this.newTask.text = ''
+          },
+          removeTask: function (task) {
+            tasksRef.child(task['.key']).remove()
+          }
+        }
+      })
     </script>
 </body>
 </html>
